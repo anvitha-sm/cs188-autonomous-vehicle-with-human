@@ -24,7 +24,6 @@ The two ML model files are downloaded automatically on first run:
 Entry point
 -----------
 Set this file as the controller field of your car robot node in Webots.
-Webots calls the script directly; there is no if __name__ == "__main__" guard.
 
 Coordinate conventions
 ----------------------
