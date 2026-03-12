@@ -17,13 +17,13 @@ Install Python packages with:
     pip install -r requirements.txt
 
 Webots R2023b or later must be installed from https://cyberbotics.com.
-The two ML model files are downloaded automatically on first run:
-    gesture_recognizer.task   (MediaPipe hand-gesture recogniser)
-    efficientdet_lite0.tflite (MediaPipe object detector)
+The two ML model files must be downloaded manually into models/
+before running — see README.md for download links.
 
 Entry point
 -----------
 Set this file as the controller field of your car robot node in Webots.
+Webots calls the script directly; there is no if __name__ == "__main__" guard.
 
 Coordinate conventions
 ----------------------
@@ -43,7 +43,6 @@ import math
 import os
 import threading
 import time
-import urllib.request
 
 # ===========================================================================
 # Third-party imports
@@ -70,19 +69,9 @@ from controller import Supervisor, Mouse
 # ===========================================================================
 
 # --- Model files ------------------------------------------------------------
-# MediaPipe gesture recogniser (float16, task bundle).
-GESTURE_MODEL_PATH = "gesture_recognizer.task"
-GESTURE_MODEL_URL  = (
-    "https://storage.googleapis.com/mediapipe-models/gesture_recognizer"
-    "/gesture_recognizer/float16/1/gesture_recognizer.task"
-)
-
-# MediaPipe EfficientDet Lite object detector (float16, TFLite).
-OBJ_MODEL_PATH = "efficientdet_lite0.tflite"
-OBJ_MODEL_URL  = (
-    "https://storage.googleapis.com/mediapipe-models/object_detector"
-    "/efficientdet_lite0/float16/1/efficientdet_lite0.tflite"
-)
+# Download these manually into models/ before running — see README.md.
+GESTURE_MODEL_PATH = "models/gesture_recognizer.task"
+OBJ_MODEL_PATH     = "models/efficientdet_lite0.tflite"
 
 # --- Gesture recognition ----------------------------------------------------
 # Minimum confidence score for a gesture to be accepted.
@@ -189,22 +178,6 @@ _speech_turn_cmd = None   # "left" | "right" | None
 # Obstacle detection results (written by MediaPipe callback, read by main loop)
 _det_lock = threading.Lock()
 _det_hit  = [False, False]  # [lane-0 blocked, lane-1 blocked]
-
-
-# ===========================================================================
-# Model download helper
-# ===========================================================================
-
-def _ensure_model(path, url):
-    """
-    Downloads the ML model file at url to path if it does not already exist.
-    Prints progress messages so the operator knows what is happening on first
-    run.
-    """
-    if not os.path.exists(path):
-        print(f"[MODEL] Downloading {os.path.basename(path)} ...")
-        urllib.request.urlretrieve(url, path)
-        print(f"[MODEL] Saved to {path}")
 
 
 # ===========================================================================
@@ -1278,9 +1251,13 @@ def _apply_speech_turn_override(arrived_jid, from_jid, goal_jid_ref):
 # Initialisation
 # ===========================================================================
 
-# Download ML models if not already present
-_ensure_model(GESTURE_MODEL_PATH, GESTURE_MODEL_URL)
-_ensure_model(OBJ_MODEL_PATH,     OBJ_MODEL_URL)
+# Verify model files exist before starting
+for _model_path in (GESTURE_MODEL_PATH, OBJ_MODEL_PATH):
+    if not os.path.exists(_model_path):
+        raise FileNotFoundError(
+            f"Model file not found: {_model_path}\n"
+            f"Download it manually — see README.md for links."
+        )
 
 # Start background threads before connecting to Webots so they are ready
 # as soon as the simulation begins stepping
